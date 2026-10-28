@@ -1,36 +1,16 @@
 import AppKit
 
-/// Window levels to try for drawing above Mission Control. Which one works is part of what this test finds out.
-enum OverlayLevel: Int, CaseIterable {
-    case statusBar, popUpMenu, screenSaver, shielding
-
-    var title: String {
-        switch self {
-        case .statusBar: return "Status bar"
-        case .popUpMenu: return "Pop-up menu"
-        case .screenSaver: return "Screen saver"
-        case .shielding: return "Above everything (shielding)"
-        }
-    }
-
-    var windowLevel: NSWindow.Level {
-        switch self {
-        case .statusBar: return .statusBar
-        case .popUpMenu: return .popUpMenu
-        case .screenSaver: return .screenSaver
-        case .shielding: return NSWindow.Level(rawValue: Int(CGShieldingWindowLevel()))
-        }
-    }
-}
+/// High enough to stay above the Dock-drawn Mission Control surface.
+private let overlayLevel = NSWindow.Level(rawValue: Int(CGShieldingWindowLevel()))
 
 /// A small borderless panel that stays on every Space and is not itself pulled into Mission Control.
-private func makePanel(level: NSWindow.Level) -> NSPanel {
+private func makePanel() -> NSPanel {
     let panel = NSPanel(contentRect: .zero, styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
     panel.isOpaque = false
     panel.backgroundColor = .clear
     panel.hasShadow = false
     panel.animationBehavior = .none
-    panel.level = level
+    panel.level = overlayLevel
     panel.collectionBehavior = [.canJoinAllSpaces, .stationary, .ignoresCycle, .fullScreenAuxiliary]
     panel.hidesOnDeactivate = false
     panel.isReleasedWhenClosed = false
@@ -43,8 +23,8 @@ private final class ThumbnailOverlay {
     let iconPanel: NSPanel
     let iconView = NSImageView()
 
-    init(level: NSWindow.Level) {
-        iconPanel = makePanel(level: level)
+    init() {
+        iconPanel = makePanel()
         iconPanel.ignoresMouseEvents = true
         iconView.imageScaling = .scaleProportionallyUpOrDown
         iconPanel.contentView = iconView
@@ -79,25 +59,20 @@ private final class ThumbnailOverlay {
     func hide() {
         iconPanel.orderOut(nil)
     }
-
-    func setLevel(_ level: NSWindow.Level) {
-        iconPanel.level = level
-    }
 }
 
 /// Keeps one ThumbnailOverlay per visible thumbnail.
 final class OverlayController {
-    var level: OverlayLevel = .shielding {
-        didSet { overlays.forEach { $0.setLevel(level.windowLevel) } }
+    var showIcons = UserDefaults.standard.object(forKey: "showIcons") as? Bool ?? true {
+        didSet { UserDefaults.standard.set(showIcons, forKey: "showIcons") }
     }
-    var showIcons = true
 
     private var overlays: [ThumbnailOverlay] = []
 
     /// Frames are in global Accessibility coordinates.
     func show(_ items: [(frame: CGRect, window: AppWindow?)]) {
         while overlays.count < items.count {
-            overlays.append(ThumbnailOverlay(level: level.windowLevel))
+            overlays.append(ThumbnailOverlay())
         }
         for (overlay, item) in zip(overlays, items) {
             overlay.show(over: item.frame, window: item.window, showIcon: showIcons)

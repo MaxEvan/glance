@@ -15,7 +15,7 @@ struct Thumbnail {
 /// Apple does not document this tree; while Mission Control is open the Dock is
 /// expected to expose an extra child group (identifier "mc") holding the thumbnails.
 final class MissionControlWatcher {
-    var onBegin: (AXUIElement) -> Void = { _ in }
+    var onBegin: () -> Void = {}
     var onUpdate: ([Thumbnail]) -> Void = { _ in }
     var onEnd: () -> Void = {}
 
@@ -55,7 +55,7 @@ final class MissionControlWatcher {
         if !isActive {
             isActive = true
             Log.write("Mission Control opened")
-            onBegin(mc)
+            onBegin()
         }
 
         let thumbnails = Self.collectThumbnails(in: mc)
@@ -93,24 +93,4 @@ final class MissionControlWatcher {
         return result
     }
 
-    /// Writes the full Mission Control subtree to the log, plus every attribute of the
-    /// first few thumbnails, so we can learn what the Dock exposes on this macOS version.
-    static func dumpTree(_ root: AXUIElement) {
-        Log.write("---- Mission Control AX tree ----")
-        var detailed = 0
-        func visit(_ element: AXUIElement, depth: Int) {
-            guard depth < 12 else { return }
-            Log.write(String(repeating: "  ", count: depth) + element.summary)
-            if element.role == kAXButtonRole, detailed < 2 {
-                detailed += 1
-                for name in element.attributeNames {
-                    let value = element.value(name).map { String(describing: $0) } ?? "nil"
-                    Log.write(String(repeating: "  ", count: depth + 2) + "\(name) = \(value.prefix(200))")
-                }
-            }
-            for child in element.children { visit(child, depth: depth + 1) }
-        }
-        visit(root, depth: 0)
-        Log.write("---- end of tree ----")
-    }
 }

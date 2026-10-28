@@ -1,5 +1,6 @@
 import AppKit
 import ApplicationServices
+import ServiceManagement
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private var statusItem: NSStatusItem!
@@ -14,6 +15,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var lastMatchSummary = ""
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        Log.trimIfLarge()
         Log.write("MCOverlay launched on macOS \(ProcessInfo.processInfo.operatingSystemVersionString)")
         setUpStatusItem()
         requestAccessibility()
@@ -48,8 +50,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             Log.write("Could not install click event tap: middle-click and three-finger click will not close windows")
         }
 
-        watcher.onBegin = { [weak self] mc in
-            MissionControlWatcher.dumpTree(mc)
+        watcher.onBegin = { [weak self] in
             self?.refreshWindows()
             self?.clicks.setEnabled(true)
         }
@@ -122,16 +123,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         icons.target = self
         icons.state = overlay.showIcons ? .on : .off
 
-        let levelMenu = NSMenu()
-        for level in OverlayLevel.allCases {
-            let item = levelMenu.addItem(withTitle: level.title, action: #selector(selectLevel(_:)), keyEquivalent: "")
-            item.target = self
-            item.tag = level.rawValue
-            item.state = level == overlay.level ? .on : .off
-        }
-        menu.addItem(withTitle: "Overlay Level", action: nil, keyEquivalent: "").submenu = levelMenu
+        let login = menu.addItem(withTitle: "Launch at Login", action: #selector(toggleLaunchAtLogin(_:)), keyEquivalent: "")
+        login.target = self
+        login.state = SMAppService.mainApp.status == .enabled ? .on : .off
 
         menu.addItem(.separator())
+        menu.addItem(withTitle: "About MCOverlay", action: #selector(showAbout), keyEquivalent: "").target = self
         menu.addItem(withTitle: "Open Log", action: #selector(openLog), keyEquivalent: "l").target = self
         menu.addItem(withTitle: "Quit MCOverlay", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         statusItem.menu = menu
@@ -146,11 +143,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         sender.state = overlay.showIcons ? .on : .off
     }
 
-    @objc private func selectLevel(_ sender: NSMenuItem) {
-        guard let level = OverlayLevel(rawValue: sender.tag) else { return }
-        overlay.level = level
-        sender.menu?.items.forEach { $0.state = $0 == sender ? .on : .off }
-        Log.write("Overlay level set to \(level.title)")
+    @objc private func toggleLaunchAtLogin(_ sender: NSMenuItem) {
+        let service = SMAppService.mainApp
+        do {
+            if service.status == .enabled {
+                try service.unregister()
+            } else {
+                try service.register()
+            }
+        } catch {
+            Log.write("Launch at Login change failed: \(error)")
+        }
+        sender.state = service.status == .enabled ? .on : .off
+    }
+
+    @objc private func showAbout() {
+        NSApp.activate(ignoringOtherApps: true)
+        NSApp.orderFrontStandardAboutPanel(nil)
     }
 
     @objc private func openLog() {

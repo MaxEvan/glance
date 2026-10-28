@@ -11,6 +11,12 @@ enum Log {
         return f
     }()
 
+    /// Starts a fresh log when the old one passes 1 MB.
+    static func trimIfLarge() {
+        let size = (try? FileManager.default.attributesOfItem(atPath: url.path)[.size] as? Int) ?? 0
+        if size > 1_000_000 { try? FileManager.default.removeItem(at: url) }
+    }
+
     static func write(_ message: String) {
         let line = "\(formatter.string(from: Date())) \(message)\n"
         print(line, terminator: "")
