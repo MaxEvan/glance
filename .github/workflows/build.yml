@@ -1,0 +1,80 @@
+name: Build
+
+# Every push and PR builds the universal DMG and smoke-tests it on the last three
+# macOS versions, on Apple Silicon and Intel. Pushing a tag like v1.2.0 also
+# publishes the DMG as a GitHub Release.
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v4
+      - name: Work out the version
+        id: version
+        run: |
+          if [ "${GITHUB_REF_TYPE}" = "tag" ]; then
+            echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+          else
+            echo "version=0.0.0-dev.${GITHUB_RUN_NUMBER}" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Build DMG
+        run: VERSION="${{ steps.version.outputs.version }}" ./scripts/make-dmg.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Glance-dmg
+          path: build/Glance.dmg
+          if-no-files-found: error
+
+  test:
+    needs: build
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { runner: macos-26, label: "macOS 26 · Apple Silicon" }
+          - { runner: macos-26-intel, label: "macOS 26 · Intel" }
+          - { runner: macos-15, label: "macOS 15 · Apple Silicon" }
+          - { runner: macos-15-intel, label: "macOS 15 · Intel" }
+          # GitHub retires its macOS 14 runners on 2026-11-02 and never offered a
+          # free Intel one, so this job is allowed to fail once the image is gone.
+          - { runner: macos-14, label: "macOS 14 · Apple Silicon", optional: true }
+    name: Test on ${{ matrix.label }}
+    runs-on: ${{ matrix.runner }}
+    continue-on-error: ${{ matrix.optional == true }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: Glance-dmg
+          path: build
+      - name: Smoke test
+        run: ./scripts/smoke-test.sh build/Glance.dmg
+
+  release:
+    if: github.ref_type == 'tag'
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: Glance-dmg
+          path: build
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mv build/Glance.dmg "build/Glance-${GITHUB_REF_NAME}.dmg"
+          gh release create "$GITHUB_REF_NAME" "build/Glance-${GITHUB_REF_NAME}.dmg" \
+            --repo "$GITHUB_REPOSITORY" --title "Glance ${GITHUB_REF_NAME}" --generate-notes \
+            --notes "Download the DMG, drag Glance to Applications, then see the README for the first-launch steps (Open Anyway + Accessibility)."
