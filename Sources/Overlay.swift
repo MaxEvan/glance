@@ -36,9 +36,8 @@ private final class ThumbnailOverlay {
         if showIcon, let icon = window?.app.icon {
             let size = min(64, max(32, frame.height * 0.3))
             iconView.image = icon
-            // Bottom-centre, just inside the thumbnail, so it sits right above the
-            // window title Mission Control shows below the thumbnail on hover.
-            iconPanel.setFrame(NSRect(x: frame.midX - size / 2, y: frame.minY + 4, width: size, height: size), display: true)
+            // Bottom-centre, straddling the thumbnail's bottom edge.
+            iconPanel.setFrame(NSRect(x: frame.midX - size / 2, y: frame.minY - size * 0.35, width: size, height: size), display: true)
             if !iconPanel.isVisible { fadeIn(iconPanel) }
         } else {
             iconPanel.orderOut(nil)
