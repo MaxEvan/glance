@@ -5,6 +5,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var statusItem: NSStatusItem!
     private let permissionItem = NSMenuItem(title: "", action: nil, keyEquivalent: "")
     private var permissionTimer: Timer?
+    private let watcher = MissionControlWatcher()
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         Log.write("MCOverlay launched on macOS \(ProcessInfo.processInfo.operatingSystemVersionString)")
@@ -32,6 +33,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func accessibilityGranted() {
         Log.write("Accessibility permission granted")
         updatePermissionItem(granted: true)
+        watcher.onBegin = { mc in MissionControlWatcher.dumpTree(mc) }
+        watcher.start()
     }
 
     // MARK: Menu
