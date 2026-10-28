@@ -6,12 +6,20 @@
 	<string>com.maxevangeliste.mcoverlay</string>
 	<key>CFBundleName</key>
 	<string>MCOverlay</string>
+	<key>CFBundleDisplayName</key>
+	<string>MCOverlay</string>
+	<key>CFBundleIconFile</key>
+	<string>AppIcon</string>
+	<key>LSApplicationCategoryType</key>
+	<string>public.app-category.utilities</string>
+	<key>NSHumanReadableCopyright</key>
+	<string>© 2026 Max Evangeliste</string>
 	<key>CFBundleExecutable</key>
 	<string>MCOverlay</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
-	<string>0.1</string>
+	<string>1.0</string>
 	<key>CFBundleVersion</key>
 	<string>1</string>
 	<key>LSMinimumSystemVersion</key>
