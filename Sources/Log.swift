@@ -1,9 +1,9 @@
 import Foundation
 
-/// Appends to ~/Library/Logs/MCOverlay.log so a test run can be inspected afterwards.
+/// Appends to ~/Library/Logs/Glance.log for troubleshooting.
 enum Log {
     static let url = FileManager.default.homeDirectoryForCurrentUser
-        .appendingPathComponent("Library/Logs/MCOverlay.log")
+        .appendingPathComponent("Library/Logs/Glance.log")
 
     private static let formatter: DateFormatter = {
         let f = DateFormatter()

@@ -16,7 +16,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         Log.trimIfLarge()
-        Log.write("MCOverlay launched on macOS \(ProcessInfo.processInfo.operatingSystemVersionString)")
+        Log.write("Glance launched on macOS \(ProcessInfo.processInfo.operatingSystemVersionString)")
         setUpStatusItem()
         requestAccessibility()
     }
@@ -113,7 +113,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func setUpStatusItem() {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
-        statusItem.button?.image = NSImage(systemSymbolName: "rectangle.3.group", accessibilityDescription: "MCOverlay")
+        statusItem.button?.image = NSImage(systemSymbolName: "rectangle.3.group", accessibilityDescription: "Glance")
 
         let menu = NSMenu()
         menu.addItem(permissionItem)
@@ -128,9 +128,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         login.state = SMAppService.mainApp.status == .enabled ? .on : .off
 
         menu.addItem(.separator())
-        menu.addItem(withTitle: "About MCOverlay", action: #selector(showAbout), keyEquivalent: "").target = self
+        menu.addItem(withTitle: "About Glance", action: #selector(showAbout), keyEquivalent: "").target = self
         menu.addItem(withTitle: "Open Log", action: #selector(openLog), keyEquivalent: "l").target = self
-        menu.addItem(withTitle: "Quit MCOverlay", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
+        menu.addItem(withTitle: "Quit Glance", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         statusItem.menu = menu
     }
 

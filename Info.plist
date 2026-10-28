@@ -3,11 +3,11 @@
 <plist version="1.0">
 <dict>
 	<key>CFBundleIdentifier</key>
-	<string>com.maxevangeliste.mcoverlay</string>
+	<string>com.maxevangeliste.glance</string>
 	<key>CFBundleName</key>
-	<string>MCOverlay</string>
+	<string>Glance</string>
 	<key>CFBundleDisplayName</key>
-	<string>MCOverlay</string>
+	<string>Glance</string>
 	<key>CFBundleIconFile</key>
 	<string>AppIcon</string>
 	<key>LSApplicationCategoryType</key>
@@ -15,7 +15,7 @@
 	<key>NSHumanReadableCopyright</key>
 	<string>© 2026 Max Evangeliste</string>
 	<key>CFBundleExecutable</key>
-	<string>MCOverlay</string>
+	<string>Glance</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
