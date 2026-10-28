@@ -7,7 +7,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var permissionTimer: Timer?
     private let watcher = MissionControlWatcher()
     private let overlay = OverlayController()
+    private let clicks = ClickInterceptor()
     private var windows: [AppWindow] = []
+    /// What is on screen right now, for hit-testing clicks.
+    private var visible: [(thumbnail: Thumbnail, window: AppWindow?)] = []
     private var lastMatchSummary = ""
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -37,13 +40,25 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         Log.write("Accessibility permission granted")
         updatePermissionItem(granted: true)
 
+        if !TouchMonitor.shared.start() {
+            Log.write("Touch monitor unavailable: three-finger click disabled")
+        }
+        clicks.onMouseDown = { [weak self] point, button in self?.handleClick(at: point, button) ?? false }
+        if !clicks.install() {
+            Log.write("Could not install click event tap: close buttons will not respond")
+        }
+
         watcher.onBegin = { [weak self] mc in
             MissionControlWatcher.dumpTree(mc)
             self?.refreshWindows()
+            self?.clicks.setEnabled(true)
         }
         watcher.onUpdate = { [weak self] thumbnails in self?.showOverlays(for: thumbnails) }
-        watcher.onEnd = { [weak self] in self?.overlay.hideAll() }
-        overlay.onClose = { [weak self] window in self?.close(window) }
+        watcher.onEnd = { [weak self] in
+            self?.clicks.setEnabled(false)
+            self?.visible = []
+            self?.overlay.hideAll()
+        }
         watcher.start()
     }
 
@@ -58,7 +73,30 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func showOverlays(for thumbnails: [Thumbnail]) {
         let matches = WindowIndex.match(thumbnails, to: windows)
         logMatchesIfChanged(thumbnails, matches)
-        overlay.show(zip(thumbnails, matches).map { (cocoaRect(fromAX: $0.frame), $1) })
+        visible = Array(zip(thumbnails, matches))
+        overlay.show(visible.map { ($0.thumbnail.frame, $0.window) })
+    }
+
+    /// Closes a window on: a click on its X, a middle-click on its thumbnail, or a
+    /// three-finger trackpad click on its thumbnail. Returns `true` if the click was used.
+    private func handleClick(at point: CGPoint, _ button: ClickInterceptor.Button) -> Bool {
+        if button == .left, overlay.showCloseButtons,
+           let hit = visible.first(where: { $0.window != nil && closeButtonFrame(forThumbnail: $0.thumbnail.frame).insetBy(dx: -4, dy: -4).contains(point) }) {
+            Log.write("X clicked on \"\(hit.thumbnail.title ?? "")\"")
+            close(hit.window!)
+            return true
+        }
+
+        let threeFinger = button == .left && TouchMonitor.shared.isThreeFingerClick
+        guard button == .middle || threeFinger,
+              let hit = visible.first(where: { $0.thumbnail.frame.contains(point) }) else { return false }
+        Log.write("\(threeFinger ? "Three-finger" : "Middle") click on \"\(hit.thumbnail.title ?? "")\"")
+        guard let window = hit.window else {
+            Log.write("  no matching window; ignoring")
+            return false
+        }
+        close(window)
+        return true
     }
 
     private func logMatchesIfChanged(_ thumbnails: [Thumbnail], _ matches: [AppWindow?]) {
