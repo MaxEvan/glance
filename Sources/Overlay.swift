@@ -23,13 +23,6 @@ enum OverlayLevel: Int, CaseIterable {
     }
 }
 
-/// Where the X is drawn for a thumbnail, in global Accessibility coordinates.
-/// Shared with the click hit-test so the two always agree.
-func closeButtonFrame(forThumbnail frame: CGRect) -> CGRect {
-    let size: CGFloat = 24
-    return CGRect(x: frame.minX - size / 2 + 4, y: frame.minY - size / 2 + 4, width: size, height: size)
-}
-
 /// A small borderless panel that stays on every Space and is not itself pulled into Mission Control.
 private func makePanel(level: NSWindow.Level) -> NSPanel {
     let panel = NSPanel(contentRect: .zero, styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
@@ -45,49 +38,20 @@ private func makePanel(level: NSWindow.Level) -> NSPanel {
     return panel
 }
 
-/// Round "×" drawn like Exposé's close button. Purely visual: clicks are handled by ClickInterceptor.
-final class CloseButtonView: NSView {
-    override func draw(_ dirtyRect: NSRect) {
-        let circle = NSBezierPath(ovalIn: bounds.insetBy(dx: 1, dy: 1))
-        NSColor(white: 0.15, alpha: 0.9).setFill()
-        circle.fill()
-        NSColor(white: 1, alpha: 0.9).setStroke()
-        circle.lineWidth = 1.5
-        circle.stroke()
-
-        let inset = bounds.width * 0.32
-        let cross = NSBezierPath()
-        cross.move(to: NSPoint(x: inset, y: inset))
-        cross.line(to: NSPoint(x: bounds.maxX - inset, y: bounds.maxY - inset))
-        cross.move(to: NSPoint(x: inset, y: bounds.maxY - inset))
-        cross.line(to: NSPoint(x: bounds.maxX - inset, y: inset))
-        cross.lineWidth = 2
-        cross.lineCapStyle = .round
-        NSColor.white.setStroke()
-        cross.stroke()
-    }
-}
-
-/// The app icon and close button drawn over one thumbnail.
+/// The app icon drawn over one thumbnail.
 private final class ThumbnailOverlay {
     let iconPanel: NSPanel
     let iconView = NSImageView()
-    let closePanel: NSPanel
-    let closeView = CloseButtonView()
 
     init(level: NSWindow.Level) {
         iconPanel = makePanel(level: level)
         iconPanel.ignoresMouseEvents = true
         iconView.imageScaling = .scaleProportionallyUpOrDown
         iconPanel.contentView = iconView
-
-        closePanel = makePanel(level: level)
-        closePanel.ignoresMouseEvents = true
-        closePanel.contentView = closeView
     }
 
     /// `axFrame` is the thumbnail in global Accessibility coordinates.
-    func show(over axFrame: CGRect, window: AppWindow?, showIcon: Bool, showClose: Bool) {
+    func show(over axFrame: CGRect, window: AppWindow?, showIcon: Bool) {
         let frame = cocoaRect(fromAX: axFrame)
         if showIcon, let icon = window?.app.icon {
             let size = min(64, max(32, frame.height * 0.3))
@@ -96,13 +60,6 @@ private final class ThumbnailOverlay {
             if !iconPanel.isVisible { fadeIn(iconPanel) }
         } else {
             iconPanel.orderOut(nil)
-        }
-
-        if showClose, window != nil {
-            closePanel.setFrame(cocoaRect(fromAX: closeButtonFrame(forThumbnail: axFrame)), display: true)
-            closePanel.orderFrontRegardless()
-        } else {
-            closePanel.orderOut(nil)
         }
     }
 
@@ -119,12 +76,10 @@ private final class ThumbnailOverlay {
 
     func hide() {
         iconPanel.orderOut(nil)
-        closePanel.orderOut(nil)
     }
 
     func setLevel(_ level: NSWindow.Level) {
         iconPanel.level = level
-        closePanel.level = level
     }
 }
 
@@ -134,7 +89,6 @@ final class OverlayController {
         didSet { overlays.forEach { $0.setLevel(level.windowLevel) } }
     }
     var showIcons = true
-    var showCloseButtons = true
 
     private var overlays: [ThumbnailOverlay] = []
 
@@ -144,7 +98,7 @@ final class OverlayController {
             overlays.append(ThumbnailOverlay(level: level.windowLevel))
         }
         for (overlay, item) in zip(overlays, items) {
-            overlay.show(over: item.frame, window: item.window, showIcon: showIcons, showClose: showCloseButtons)
+            overlay.show(over: item.frame, window: item.window, showIcon: showIcons)
         }
         overlays.dropFirst(items.count).forEach { $0.hide() }
     }

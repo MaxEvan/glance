@@ -45,7 +45,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         clicks.onMouseDown = { [weak self] point, button in self?.handleClick(at: point, button) ?? false }
         if !clicks.install() {
-            Log.write("Could not install click event tap: close buttons will not respond")
+            Log.write("Could not install click event tap: middle-click and three-finger click will not close windows")
         }
 
         watcher.onBegin = { [weak self] mc in
@@ -77,16 +77,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         overlay.show(visible.map { ($0.thumbnail.frame, $0.window) })
     }
 
-    /// Closes a window on: a click on its X, a middle-click on its thumbnail, or a
-    /// three-finger trackpad click on its thumbnail. Returns `true` if the click was used.
+    /// Closes a window on a middle-click or a three-finger trackpad click on its thumbnail.
+    /// Returns `true` if the click was used.
     private func handleClick(at point: CGPoint, _ button: ClickInterceptor.Button) -> Bool {
-        if button == .left, overlay.showCloseButtons,
-           let hit = visible.first(where: { $0.window != nil && closeButtonFrame(forThumbnail: $0.thumbnail.frame).insetBy(dx: -4, dy: -4).contains(point) }) {
-            Log.write("X clicked on \"\(hit.thumbnail.title ?? "")\"")
-            close(hit.window!)
-            return true
-        }
-
         let threeFinger = button == .left && TouchMonitor.shared.isThreeFingerClick
         guard button == .middle || threeFinger,
               let hit = visible.first(where: { $0.thumbnail.frame.contains(point) }) else { return false }
@@ -128,9 +121,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let icons = menu.addItem(withTitle: "Show App Icons", action: #selector(toggleIcons(_:)), keyEquivalent: "")
         icons.target = self
         icons.state = overlay.showIcons ? .on : .off
-        let closeButtons = menu.addItem(withTitle: "Show Close Buttons", action: #selector(toggleCloseButtons(_:)), keyEquivalent: "")
-        closeButtons.target = self
-        closeButtons.state = overlay.showCloseButtons ? .on : .off
 
         let levelMenu = NSMenu()
         for level in OverlayLevel.allCases {
@@ -154,11 +144,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     @objc private func toggleIcons(_ sender: NSMenuItem) {
         overlay.showIcons.toggle()
         sender.state = overlay.showIcons ? .on : .off
-    }
-
-    @objc private func toggleCloseButtons(_ sender: NSMenuItem) {
-        overlay.showCloseButtons.toggle()
-        sender.state = overlay.showCloseButtons ? .on : .off
     }
 
     @objc private func selectLevel(_ sender: NSMenuItem) {
