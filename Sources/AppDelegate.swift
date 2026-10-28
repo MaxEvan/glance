@@ -6,6 +6,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let permissionItem = NSMenuItem(title: "", action: nil, keyEquivalent: "")
     private var permissionTimer: Timer?
     private let watcher = MissionControlWatcher()
+    private let overlay = OverlayController()
+    private var windows: [AppWindow] = []
+    private var lastMatchSummary = ""
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         Log.write("MCOverlay launched on macOS \(ProcessInfo.processInfo.operatingSystemVersionString)")
@@ -33,8 +36,45 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func accessibilityGranted() {
         Log.write("Accessibility permission granted")
         updatePermissionItem(granted: true)
-        watcher.onBegin = { mc in MissionControlWatcher.dumpTree(mc) }
+
+        watcher.onBegin = { [weak self] mc in
+            MissionControlWatcher.dumpTree(mc)
+            self?.refreshWindows()
+        }
+        watcher.onUpdate = { [weak self] thumbnails in self?.showOverlays(for: thumbnails) }
+        watcher.onEnd = { [weak self] in self?.overlay.hideAll() }
+        overlay.onClose = { [weak self] window in self?.close(window) }
         watcher.start()
+    }
+
+    // MARK: Mission Control
+
+    private func refreshWindows() {
+        windows = WindowIndex.build()
+        lastMatchSummary = ""
+        Log.write("Indexed \(windows.count) app window(s)")
+    }
+
+    private func showOverlays(for thumbnails: [Thumbnail]) {
+        let matches = WindowIndex.match(thumbnails, to: windows)
+        logMatchesIfChanged(thumbnails, matches)
+        overlay.show(zip(thumbnails, matches).map { (cocoaRect(fromAX: $0.frame), $1) })
+    }
+
+    private func logMatchesIfChanged(_ thumbnails: [Thumbnail], _ matches: [AppWindow?]) {
+        let lines = zip(thumbnails, matches).map { thumbnail, window in
+            "  \"\(thumbnail.title ?? "")\" -> " + (window.map { "\($0.app.localizedName ?? "?") / \"\($0.title)\"" } ?? "NO MATCH")
+        }
+        let summary = lines.joined(separator: "\n")
+        guard summary != lastMatchSummary else { return }
+        lastMatchSummary = summary
+        Log.write("Thumbnail matches:\n\(summary)")
+    }
+
+    private func close(_ window: AppWindow) {
+        let result = window.close()
+        Log.write("Close \(window.app.localizedName ?? "?") / \"\(window.title)\": AXError \(result.rawValue)")
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in self?.refreshWindows() }
     }
 
     // MARK: Menu
@@ -46,6 +86,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let menu = NSMenu()
         menu.addItem(permissionItem)
         menu.addItem(.separator())
+
+        let icons = menu.addItem(withTitle: "Show App Icons", action: #selector(toggleIcons(_:)), keyEquivalent: "")
+        icons.target = self
+        icons.state = overlay.showIcons ? .on : .off
+        let closeButtons = menu.addItem(withTitle: "Show Close Buttons", action: #selector(toggleCloseButtons(_:)), keyEquivalent: "")
+        closeButtons.target = self
+        closeButtons.state = overlay.showCloseButtons ? .on : .off
+
+        let levelMenu = NSMenu()
+        for level in OverlayLevel.allCases {
+            let item = levelMenu.addItem(withTitle: level.title, action: #selector(selectLevel(_:)), keyEquivalent: "")
+            item.target = self
+            item.tag = level.rawValue
+            item.state = level == overlay.level ? .on : .off
+        }
+        menu.addItem(withTitle: "Overlay Level", action: nil, keyEquivalent: "").submenu = levelMenu
+
+        menu.addItem(.separator())
         menu.addItem(withTitle: "Open Log", action: #selector(openLog), keyEquivalent: "l").target = self
         menu.addItem(withTitle: "Quit MCOverlay", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         statusItem.menu = menu
@@ -53,6 +111,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func updatePermissionItem(granted: Bool) {
         permissionItem.title = granted ? "Accessibility: granted" : "Accessibility: waiting for permission…"
+    }
+
+    @objc private func toggleIcons(_ sender: NSMenuItem) {
+        overlay.showIcons.toggle()
+        sender.state = overlay.showIcons ? .on : .off
+    }
+
+    @objc private func toggleCloseButtons(_ sender: NSMenuItem) {
+        overlay.showCloseButtons.toggle()
+        sender.state = overlay.showCloseButtons ? .on : .off
+    }
+
+    @objc private func selectLevel(_ sender: NSMenuItem) {
+        guard let level = OverlayLevel(rawValue: sender.tag) else { return }
+        overlay.level = level
+        sender.menu?.items.forEach { $0.state = $0 == sender ? .on : .off }
+        Log.write("Overlay level set to \(level.title)")
     }
 
     @objc private func openLog() {
