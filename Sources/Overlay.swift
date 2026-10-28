@@ -111,7 +111,7 @@ private final class ThumbnailOverlay {
         panel.alphaValue = 0
         panel.orderFrontRegardless()
         NSAnimationContext.runAnimationGroup { context in
-            context.duration = 0.6
+            context.duration = 0.3
             context.timingFunction = CAMediaTimingFunction(name: .easeIn)
             panel.animator().alphaValue = 1
         }
