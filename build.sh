@@ -7,11 +7,16 @@ APP=build/Glance.app
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp Info.plist "$APP/Contents/Info.plist"
+# Release builds pass VERSION (e.g. 1.2.0) to stamp the bundle.
+if [ -n "${VERSION:-}" ]; then
+  /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $VERSION" "$APP/Contents/Info.plist"
+  /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $VERSION" "$APP/Contents/Info.plist"
+fi
 cp Resources/AppIcon.icns "$APP/Contents/Resources/AppIcon.icns"
 
 for arch in arm64 x86_64; do
   swiftc -swift-version 5 -O \
-    -target "$arch-apple-macos13.0" \
+    -target "$arch-apple-macos14.0" \
     Sources/*.swift \
     -o "build/Glance-$arch"
 done
