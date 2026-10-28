@@ -36,6 +36,7 @@ private func makePanel(level: NSWindow.Level) -> NSPanel {
     panel.isOpaque = false
     panel.backgroundColor = .clear
     panel.hasShadow = false
+    panel.animationBehavior = .none
     panel.level = level
     panel.collectionBehavior = [.canJoinAllSpaces, .stationary, .ignoresCycle, .fullScreenAuxiliary]
     panel.hidesOnDeactivate = false
@@ -92,7 +93,7 @@ private final class ThumbnailOverlay {
             let size = min(64, max(32, frame.height * 0.3))
             iconView.image = icon
             iconPanel.setFrame(NSRect(x: frame.midX - size / 2, y: frame.minY - size * 0.35, width: size, height: size), display: true)
-            iconPanel.orderFrontRegardless()
+            if !iconPanel.isVisible { fadeIn(iconPanel) }
         } else {
             iconPanel.orderOut(nil)
         }
@@ -102,6 +103,17 @@ private final class ThumbnailOverlay {
             closePanel.orderFrontRegardless()
         } else {
             closePanel.orderOut(nil)
+        }
+    }
+
+    /// Slow ease-in fade, so icons appear gently as Mission Control opens.
+    private func fadeIn(_ panel: NSPanel) {
+        panel.alphaValue = 0
+        panel.orderFrontRegardless()
+        NSAnimationContext.runAnimationGroup { context in
+            context.duration = 0.6
+            context.timingFunction = CAMediaTimingFunction(name: .easeIn)
+            panel.animator().alphaValue = 1
         }
     }
 
