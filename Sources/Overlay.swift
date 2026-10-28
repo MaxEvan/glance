@@ -23,6 +23,13 @@ enum OverlayLevel: Int, CaseIterable {
     }
 }
 
+/// Where the X is drawn for a thumbnail, in global Accessibility coordinates.
+/// Shared with the click hit-test so the two always agree.
+func closeButtonFrame(forThumbnail frame: CGRect) -> CGRect {
+    let size: CGFloat = 24
+    return CGRect(x: frame.minX - size / 2 + 4, y: frame.minY - size / 2 + 4, width: size, height: size)
+}
+
 /// A small borderless panel that stays on every Space and is not itself pulled into Mission Control.
 private func makePanel(level: NSWindow.Level) -> NSPanel {
     let panel = NSPanel(contentRect: .zero, styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
@@ -37,14 +44,8 @@ private func makePanel(level: NSWindow.Level) -> NSPanel {
     return panel
 }
 
-/// Round "×" button drawn like Exposé's close button.
+/// Round "×" drawn like Exposé's close button. Purely visual: clicks are handled by ClickInterceptor.
 final class CloseButtonView: NSView {
-    var onClick: () -> Void = {}
-
-    override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
-
-    override func mouseDown(with event: NSEvent) { onClick() }
-
     override func draw(_ dirtyRect: NSRect) {
         let circle = NSBezierPath(ovalIn: bounds.insetBy(dx: 1, dy: 1))
         NSColor(white: 0.15, alpha: 0.9).setFill()
@@ -72,25 +73,21 @@ private final class ThumbnailOverlay {
     let iconView = NSImageView()
     let closePanel: NSPanel
     let closeView = CloseButtonView()
-    var window: AppWindow?
 
-    init(level: NSWindow.Level, onClose: @escaping (AppWindow) -> Void) {
+    init(level: NSWindow.Level) {
         iconPanel = makePanel(level: level)
         iconPanel.ignoresMouseEvents = true
         iconView.imageScaling = .scaleProportionallyUpOrDown
         iconPanel.contentView = iconView
 
         closePanel = makePanel(level: level)
+        closePanel.ignoresMouseEvents = true
         closePanel.contentView = closeView
-        closeView.onClick = { [unowned self] in
-            if let window = self.window { onClose(window) }
-        }
     }
 
-    /// `frame` is the thumbnail in Cocoa screen coordinates.
-    func show(over frame: NSRect, window: AppWindow?, showIcon: Bool, showClose: Bool) {
-        self.window = window
-
+    /// `axFrame` is the thumbnail in global Accessibility coordinates.
+    func show(over axFrame: CGRect, window: AppWindow?, showIcon: Bool, showClose: Bool) {
+        let frame = cocoaRect(fromAX: axFrame)
         if showIcon, let icon = window?.app.icon {
             let size = min(64, max(32, frame.height * 0.3))
             iconView.image = icon
@@ -101,8 +98,7 @@ private final class ThumbnailOverlay {
         }
 
         if showClose, window != nil {
-            let size: CGFloat = 24
-            closePanel.setFrame(NSRect(x: frame.minX - size / 2 + 4, y: frame.maxY - size / 2 - 4, width: size, height: size), display: true)
+            closePanel.setFrame(cocoaRect(fromAX: closeButtonFrame(forThumbnail: axFrame)), display: true)
             closePanel.orderFrontRegardless()
         } else {
             closePanel.orderOut(nil)
@@ -127,13 +123,13 @@ final class OverlayController {
     }
     var showIcons = true
     var showCloseButtons = true
-    var onClose: (AppWindow) -> Void = { _ in }
 
     private var overlays: [ThumbnailOverlay] = []
 
-    func show(_ items: [(frame: NSRect, window: AppWindow?)]) {
+    /// Frames are in global Accessibility coordinates.
+    func show(_ items: [(frame: CGRect, window: AppWindow?)]) {
         while overlays.count < items.count {
-            overlays.append(ThumbnailOverlay(level: level.windowLevel) { [weak self] in self?.onClose($0) })
+            overlays.append(ThumbnailOverlay(level: level.windowLevel))
         }
         for (overlay, item) in zip(overlays, items) {
             overlay.show(over: item.frame, window: item.window, showIcon: showIcons, showClose: showCloseButtons)
