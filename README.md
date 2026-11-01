@@ -6,13 +6,17 @@
 
 **See which app every window belongs to in Mission Control.** Glance puts each
 app's icon on its window thumbnails in macOS Mission Control, and lets you close
-a window straight from the overview with a middle-click, a three-finger click or Cmd+W.
+a window straight from the overview with a middle-click, a three-finger click or Cmd+W,
+or quit its app with Cmd+Q.
 
 - **App icons on thumbnails:** each window in Mission Control gets its app's icon,
   centred on the thumbnail's bottom edge, fading in as Mission Control opens.
 - **Close from Mission Control:** middle-click a thumbnail, click it with three
   fingers on the trackpad, or hover over it and press Cmd+W, to close that window
   without leaving the overview.
+- **Quit from Mission Control:** hover over a thumbnail and press Cmd+Q to quit that
+  window's app. Apps quit normally, so they can still save or ask first. Finder is the
+  exception: it stays running.
 - **Lightweight:** a menu bar app with no Dock icon and no network access.
 
 Runs on macOS 14 Sonoma, 15 Sequoia and 26 Tahoe, on Apple Silicon and Intel.
@@ -34,7 +38,7 @@ Turn on **Launch at Login** from Glance's menu bar icon to keep it running.
 macOS has no public API for Mission Control. Glance uses the Accessibility API to
 read where the Dock draws each window thumbnail and to press a window's close
 button, and an event tap to see clicks and keystrokes while Mission Control is open.
-The tap is off the rest of the time, and Glance only looks for its own shortcut: it
+The tap is off the rest of the time, and Glance only looks for its own shortcuts: it
 never records what you type. Everything stays on your Mac; Glance makes no network
 requests.
 
@@ -45,6 +49,7 @@ requests.
 | Middle-click a thumbnail | Closes that window |
 | Three-finger click a thumbnail | Closes that window |
 | Hover over a thumbnail and press Cmd+W | Closes that window |
+| Hover over a thumbnail and press Cmd+Q | Quits that window's app (does nothing on Finder) |
 
 The menu bar icon lets you hide the app icons, turn on Launch at Login, and open
 the log (`~/Library/Logs/Glance.log`) if something misbehaves.
@@ -79,6 +84,10 @@ Local builds are ad-hoc signed, so macOS asks for Accessibility again after each
   session event tap (only enabled while Mission Control is open) hit-tests clicks, and the
   cursor position when Cmd+W is pressed, against the thumbnails and presses the window's
   close button. Keystrokes away from a thumbnail pass through untouched.
+- **Quitting apps:** Cmd+Q is hit-tested the same way, then the app gets a normal quit
+  request rather than a force quit, so it can save or prompt. Finder has no Quit by default
+  and quitting it leaves the desktop without one, so Glance consumes the keystroke on a
+  Finder thumbnail and does nothing, which also stops it quitting the frontmost app.
 
 The event-tap approach follows [CloseUp](https://github.com/oomol-lab/CloseUp), which adds
 window controls to Mission Control and is worth a look if you want more actions.
