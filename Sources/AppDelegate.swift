@@ -48,7 +48,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         clicks.onMouseDown = { [weak self] point, button in self?.handleClick(at: point, button) ?? false }
         clicks.onShortcut = { [weak self] point, shortcut in self?.handleShortcut(at: point, shortcut) ?? false }
         if !clicks.install() {
-            Log.write("Could not install event tap: middle-click, three-finger click and Cmd+W will not close windows")
+            Log.write("Could not install event tap: middle-click, three-finger click, Cmd+W and Cmd+Q will not work")
         }
 
         watcher.onBegin = { [weak self] in
@@ -97,6 +97,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             guard let window = hoveredWindow(at: point, action: "Cmd+W") else { return false }
             close(window)
             return true
+        case .quitApp:
+            guard let window = hoveredWindow(at: point, action: "Cmd+Q") else { return false }
+            quit(window.app)
+            return true
         }
     }
 
@@ -124,6 +128,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         DispatchQueue.main.async { [weak self] in
             let result = window.close()
             Log.write("Close \(window.app.localizedName ?? "?") / \"\(window.title)\": AXError \(result.rawValue)")
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { self?.refreshWindows() }
+        }
+    }
+
+    /// Asks the app to quit normally, so it can save or prompt. Deferred like `close(_:)`.
+    /// Finder is left running: it has no Quit by default, and quitting it leaves the desktop without one.
+    private func quit(_ app: NSRunningApplication) {
+        DispatchQueue.main.async { [weak self] in
+            let name = app.localizedName ?? "?"
+            guard app.bundleIdentifier != "com.apple.finder" else {
+                Log.write("Quit \(name): skipped, Finder stays running")
+                return
+            }
+            let result = app.terminate()
+            Log.write("Quit \(name): \(result)")
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { self?.refreshWindows() }
         }
     }

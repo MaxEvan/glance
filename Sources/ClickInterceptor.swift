@@ -9,10 +9,10 @@ import AppKit
 /// consumed key-down takes its auto-repeats and key-up with it.
 final class ClickInterceptor {
     enum Button { case left, middle }
-    enum Shortcut { case closeWindow }
+    enum Shortcut { case closeWindow, quitApp }
 
     /// Command + the letter a key produces on the current layout.
-    private static let shortcuts: [String: Shortcut] = ["w": .closeWindow]
+    private static let shortcuts: [String: Shortcut] = ["w": .closeWindow, "q": .quitApp]
     private static let modifiers: CGEventFlags = [.maskCommand, .maskShift, .maskControl, .maskAlternate]
 
     /// Called on mouse-down with the location in global Accessibility/CG coordinates.
