@@ -103,10 +103,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         Log.write("Thumbnail matches:\n\(summary)")
     }
 
+    /// Deferred so the event tap callback returns before the Accessibility round trip to
+    /// the app, which can be slow: macOS disables a tap that holds up input for too long.
     private func close(_ window: AppWindow) {
-        let result = window.close()
-        Log.write("Close \(window.app.localizedName ?? "?") / \"\(window.title)\": AXError \(result.rawValue)")
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in self?.refreshWindows() }
+        DispatchQueue.main.async { [weak self] in
+            let result = window.close()
+            Log.write("Close \(window.app.localizedName ?? "?") / \"\(window.title)\": AXError \(result.rawValue)")
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { self?.refreshWindows() }
+        }
     }
 
     // MARK: Menu
