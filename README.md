@@ -6,12 +6,13 @@
 
 **See which app every window belongs to in Mission Control.** Glance puts each
 app's icon on its window thumbnails in macOS Mission Control, and lets you close
-a window straight from the overview with a middle-click or a three-finger click.
+a window straight from the overview with a middle-click, a three-finger click or Cmd+W.
 
 - **App icons on thumbnails:** each window in Mission Control gets its app's icon,
   centred on the thumbnail's bottom edge, fading in as Mission Control opens.
-- **Close from Mission Control:** middle-click a thumbnail, or click it with three
-  fingers on the trackpad, to close that window without leaving the overview.
+- **Close from Mission Control:** middle-click a thumbnail, click it with three
+  fingers on the trackpad, or hover over it and press Cmd+W, to close that window
+  without leaving the overview.
 - **Lightweight:** a menu bar app with no Dock icon and no network access.
 
 Runs on macOS 14 Sonoma, 15 Sequoia and 26 Tahoe, on Apple Silicon and Intel.
@@ -32,8 +33,10 @@ Turn on **Launch at Login** from Glance's menu bar icon to keep it running.
 
 macOS has no public API for Mission Control. Glance uses the Accessibility API to
 read where the Dock draws each window thumbnail and to press a window's close
-button, and an event tap to see clicks while Mission Control is open. Everything
-stays on your Mac; Glance makes no network requests.
+button, and an event tap to see clicks and keystrokes while Mission Control is open.
+The tap is off the rest of the time, and Glance only looks for its own shortcut: it
+never records what you type. Everything stays on your Mac; Glance makes no network
+requests.
 
 ## Usage
 
@@ -41,6 +44,7 @@ stays on your Mac; Glance makes no network requests.
 |---|---|
 | Middle-click a thumbnail | Closes that window |
 | Three-finger click a thumbnail | Closes that window |
+| Hover over a thumbnail and press Cmd+W | Closes that window |
 
 The menu bar icon lets you hide the app icons, turn on Launch at Login, and open
 the log (`~/Library/Logs/Glance.log`) if something misbehaves.
@@ -72,8 +76,9 @@ Local builds are ad-hoc signed, so macOS asks for Accessibility again after each
 - **Drawing icons:** small borderless panels at a very high window level sit above the
   Mission Control surface and ignore the mouse.
 - **Closing windows:** Mission Control swallows clicks before other windows see them, so a
-  session event tap (only enabled while Mission Control is open) hit-tests clicks against
-  the thumbnails and presses the window's close button.
+  session event tap (only enabled while Mission Control is open) hit-tests clicks, and the
+  cursor position when Cmd+W is pressed, against the thumbnails and presses the window's
+  close button. Keystrokes away from a thumbnail pass through untouched.
 
 The event-tap approach follows [CloseUp](https://github.com/oomol-lab/CloseUp), which adds
 window controls to Mission Control and is worth a look if you want more actions.
