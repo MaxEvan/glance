@@ -46,9 +46,9 @@ requests.
 
 | In Mission Control | Does |
 |---|---|
-| Middle-click a thumbnail | Closes that window |
-| Three-finger click a thumbnail | Closes that window |
-| Hover over a thumbnail and press Cmd+W | Closes that window |
+| Middle-click a thumbnail | Closes that window, with all its tabs |
+| Three-finger click a thumbnail | Closes that window, with all its tabs |
+| Hover over a thumbnail and press Cmd+W | Closes that window, with all its tabs |
 | Hover over a thumbnail and press Cmd+Q | Quits that window's app (does nothing on Finder) |
 
 The menu bar icon lets you hide the app icons, turn on Launch at Login, and open
@@ -84,6 +84,8 @@ Local builds are ad-hoc signed, so macOS asks for Accessibility again after each
   session event tap (only enabled while Mission Control is open) hit-tests clicks, and the
   cursor position when Cmd+W is pressed, against the thumbnails and presses the window's
   close button. Keystrokes away from a thumbnail pass through untouched.
+- **Closing tabbed windows:** a window's close button only closes its active tab, so Glance
+  repeats it until every tab is gone. The next tab can show for a moment as it closes.
 - **Quitting apps:** Cmd+Q is hit-tested the same way, then the app gets a normal quit
   request rather than a force quit, so it can save or prompt. Finder has no Quit by default
   and quitting it leaves the desktop without one, so Glance consumes the keystroke on a
