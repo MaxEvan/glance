@@ -30,9 +30,11 @@ enum WindowIndex {
     }
 
     /// Pairs each thumbnail with a window, matching on title. A window is used at most once
-    /// so two thumbnails with the same title land on two different windows.
+    /// so two thumbnails with the same title land on two different windows. Windows of apps
+    /// that have exited since `windows` was built are skipped, or they could take the title
+    /// match from a live window and send its actions to the wrong app.
     static func match(_ thumbnails: [Thumbnail], to windows: [AppWindow]) -> [AppWindow?] {
-        var available = windows
+        var available = windows.filter { !$0.app.isTerminated }
         return thumbnails.map { thumbnail in
             guard let title = thumbnail.title, !title.isEmpty else { return nil }
             let index = available.firstIndex { $0.title == title }
