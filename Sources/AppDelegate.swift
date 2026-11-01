@@ -126,9 +126,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// the app, which can be slow: macOS disables a tap that holds up input for too long.
     private func close(_ window: AppWindow) {
         DispatchQueue.main.async { [weak self] in
-            let result = window.close()
-            Log.write("Close \(window.app.localizedName ?? "?") / \"\(window.title)\": AXError \(result.rawValue)")
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { self?.refreshWindows() }
+            window.close {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { self?.refreshWindows() }
+            }
         }
     }
 
