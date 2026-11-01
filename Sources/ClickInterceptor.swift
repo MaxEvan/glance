@@ -15,6 +15,7 @@ final class ClickInterceptor {
 
     private var tap: CFMachPort?
     private var swallowing: Button?
+    private var wanted = false
 
     /// Creates the tap (disabled). Returns `false` if macOS refused it.
     func install() -> Bool {
@@ -42,6 +43,7 @@ final class ClickInterceptor {
     /// Only enabled while Mission Control is open, so normal clicks never pass through us.
     func setEnabled(_ enabled: Bool) {
         guard let tap else { return }
+        wanted = enabled
         CGEvent.tapEnable(tap: tap, enable: enabled)
         if !enabled { swallowing = nil }
     }
@@ -50,7 +52,9 @@ final class ClickInterceptor {
     private func handle(_ type: CGEventType, _ event: CGEvent) -> Bool {
         switch type {
         case .tapDisabledByTimeout, .tapDisabledByUserInput:
-            if let tap { CGEvent.tapEnable(tap: tap, enable: true) }
+            // Out-of-band: delivered whatever the mask says. A notice can arrive after
+            // Mission Control has closed, and that must not turn the tap back on.
+            if let tap, wanted { CGEvent.tapEnable(tap: tap, enable: true) }
             return false
         case .leftMouseDown:
             return consumeIfHandled(event, .left)
