@@ -19,6 +19,25 @@ extension AXUIElement {
 
     var children: [AXUIElement] { (value(kAXChildrenAttribute) as? [AXUIElement]) ?? [] }
 
+    /// The tabs of this window's tab bar: empty without one, and `nil` if the window couldn't
+    /// be read, since a window always has children. An in-window tab view can report the same
+    /// roles, so these aren't guaranteed to be window tabs.
+    var nativeTabs: [AXUIElement]? {
+        let children = self.children
+        guard !children.isEmpty else { return nil }
+        guard let bar = children.first(where: { $0.role == kAXTabGroupRole }) else { return [] }
+        return (bar.value(kAXTabsAttribute) as? [AXUIElement]) ?? []
+    }
+
+    /// Whether this tab is the one showing in its window.
+    var isSelectedTab: Bool { (value(kAXValueAttribute) as? Int) == 1 }
+
+    /// The small close button inside a tab. It has no subrole and a localized title.
+    var tabCloseButton: AXUIElement? {
+        let buttons = children.filter { $0.role == kAXButtonRole }
+        return buttons.first { $0.identifier == "_closeButton" } ?? (buttons.count == 1 ? buttons[0] : nil)
+    }
+
     var pid: pid_t {
         var pid: pid_t = 0
         AXUIElementGetPid(self, &pid)
