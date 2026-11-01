@@ -6,14 +6,6 @@ struct AppWindow {
     let app: NSRunningApplication
     let title: String
     let element: AXUIElement
-
-    /// Presses the window's red close button.
-    func close() -> AXError {
-        guard let button = element.value(kAXCloseButtonAttribute), CFGetTypeID(button) == AXUIElementGetTypeID() else {
-            return .attributeUnsupported
-        }
-        return AXUIElementPerformAction(button as! AXUIElement, kAXPressAction as CFString)
-    }
 }
 
 enum WindowIndex {
