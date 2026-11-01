@@ -10,7 +10,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let overlay = OverlayController()
     private let clicks = ClickInterceptor()
     private var windows: [AppWindow] = []
-    /// What is on screen right now, for hit-testing clicks.
+    /// What is on screen right now, for hit-testing clicks and shortcuts.
     private var visible: [(thumbnail: Thumbnail, window: AppWindow?)] = []
     private var lastMatchSummary = ""
 
@@ -46,8 +46,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             Log.write("Touch monitor unavailable: three-finger click disabled")
         }
         clicks.onMouseDown = { [weak self] point, button in self?.handleClick(at: point, button) ?? false }
+        clicks.onShortcut = { [weak self] point, shortcut in self?.handleShortcut(at: point, shortcut) ?? false }
         if !clicks.install() {
-            Log.write("Could not install click event tap: middle-click and three-finger click will not close windows")
+            Log.write("Could not install event tap: middle-click, three-finger click and Cmd+W will not close windows")
         }
 
         watcher.onBegin = { [weak self] in
@@ -83,14 +84,28 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func handleClick(at point: CGPoint, _ button: ClickInterceptor.Button) -> Bool {
         let threeFinger = button == .left && TouchMonitor.shared.isThreeFingerClick
         guard button == .middle || threeFinger,
-              let hit = visible.first(where: { $0.thumbnail.frame.contains(point) }) else { return false }
-        Log.write("\(threeFinger ? "Three-finger" : "Middle") click on \"\(hit.thumbnail.title ?? "")\"")
-        guard let window = hit.window else {
-            Log.write("  no matching window; ignoring")
-            return false
-        }
+              let window = hoveredWindow(at: point, action: "\(threeFinger ? "Three-finger" : "Middle") click") else { return false }
         close(window)
         return true
+    }
+
+    /// Runs a keyboard shortcut on the thumbnail under the cursor.
+    /// Returns `true` if the keystroke was used.
+    private func handleShortcut(at point: CGPoint, _ shortcut: ClickInterceptor.Shortcut) -> Bool {
+        switch shortcut {
+        case .closeWindow:
+            guard let window = hoveredWindow(at: point, action: "Cmd+W") else { return false }
+            close(window)
+            return true
+        }
+    }
+
+    /// The window whose thumbnail is under `point`, logging the action that landed there.
+    private func hoveredWindow(at point: CGPoint, action: String) -> AppWindow? {
+        guard let hit = visible.first(where: { $0.thumbnail.frame.contains(point) }) else { return nil }
+        Log.write("\(action) on \"\(hit.thumbnail.title ?? "")\"")
+        if hit.window == nil { Log.write("  no matching window; ignoring") }
+        return hit.window
     }
 
     private func logMatchesIfChanged(_ thumbnails: [Thumbnail], _ matches: [AppWindow?]) {
