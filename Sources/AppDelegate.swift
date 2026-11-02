@@ -1,10 +1,12 @@
 import AppKit
 import ApplicationServices
-import ServiceManagement
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private var statusItem: NSStatusItem!
     private let permissionItem = NSMenuItem(title: "", action: nil, keyEquivalent: "")
+    private let iconsItem = NSMenuItem(title: "Show App Icons", action: #selector(toggleIcons), keyEquivalent: "")
+    private let loginItem = NSMenuItem(title: "Launch at Login", action: #selector(toggleLaunchAtLogin), keyEquivalent: "")
+    private let settingsWindow = SettingsWindowController()
     private var permissionTimer: Timer?
     private let watcher = MissionControlWatcher()
     private let overlay = OverlayController()
@@ -17,8 +19,34 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         Log.trimIfLarge()
         Log.write("Glance launched on macOS \(ProcessInfo.processInfo.operatingSystemVersionString)")
+        setUpMainMenu()
+        settingsWindow.onAbout = { [weak self] in self?.showAbout() }
+        settingsWindow.onOpenLog = { [weak self] in self?.openLog() }
         setUpStatusItem()
+        Settings.shared.onChange = { [weak self] in self?.settingsChanged() }
+        settingsChanged()
         requestAccessibility()
+        if !launchedAsLoginItem { settingsWindow.show() }
+    }
+
+    /// Opening Glance while it runs, from Finder, Raycast, Alfred or anywhere else.
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        settingsWindow.show()
+        return false
+    }
+
+    /// Only meaningful during `applicationDidFinishLaunching`, while the launch event is current.
+    private var launchedAsLoginItem: Bool {
+        let event = NSAppleEventManager.shared().currentAppleEvent
+        return event?.eventID == kAEOpenApplication
+            && event?.paramDescriptor(forKeyword: keyAEPropData)?.enumCodeValue == keyAELaunchedAsLogInItem
+    }
+
+    private func settingsChanged() {
+        statusItem.isVisible = Settings.shared.showMenuBarIcon
+        iconsItem.state = Settings.shared.showAppIcons ? .on : .off
+        loginItem.state = Settings.shared.launchAtLogin ? .on : .off
+        settingsWindow.refresh()
     }
 
     // MARK: Accessibility permission
@@ -149,6 +177,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     // MARK: Menu
 
+    /// Never drawn, as Glance has no menu bar of its own, but it is what makes Cmd+W and Cmd+Q
+    /// work while the settings window is in front.
+    private func setUpMainMenu() {
+        let menu = NSMenu()
+        menu.addItem(withTitle: "Close", action: #selector(NSWindow.performClose(_:)), keyEquivalent: "w")
+        menu.addItem(withTitle: "Quit Glance", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
+        let appItem = NSMenuItem()
+        appItem.submenu = menu
+        let mainMenu = NSMenu()
+        mainMenu.addItem(appItem)
+        NSApp.mainMenu = mainMenu
+    }
+
     private func setUpStatusItem() {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         statusItem.button?.image = NSImage(systemSymbolName: "rectangle.3.group", accessibilityDescription: "Glance")
@@ -157,15 +198,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         menu.addItem(permissionItem)
         menu.addItem(.separator())
 
-        let icons = menu.addItem(withTitle: "Show App Icons", action: #selector(toggleIcons(_:)), keyEquivalent: "")
-        icons.target = self
-        icons.state = overlay.showIcons ? .on : .off
-
-        let login = menu.addItem(withTitle: "Launch at Login", action: #selector(toggleLaunchAtLogin(_:)), keyEquivalent: "")
-        login.target = self
-        login.state = SMAppService.mainApp.status == .enabled ? .on : .off
+        iconsItem.target = self
+        menu.addItem(iconsItem)
+        loginItem.target = self
+        menu.addItem(loginItem)
 
         menu.addItem(.separator())
+        menu.addItem(withTitle: "Settings…", action: #selector(showSettings), keyEquivalent: ",").target = self
         menu.addItem(withTitle: "About Glance", action: #selector(showAbout), keyEquivalent: "").target = self
         menu.addItem(withTitle: "Open Log", action: #selector(openLog), keyEquivalent: "l").target = self
         menu.addItem(withTitle: "Quit Glance", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
@@ -174,25 +213,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func updatePermissionItem(granted: Bool) {
         permissionItem.title = granted ? "Accessibility: granted" : "Accessibility: waiting for permission…"
+        settingsWindow.accessibilityGranted = granted
     }
 
-    @objc private func toggleIcons(_ sender: NSMenuItem) {
-        overlay.showIcons.toggle()
-        sender.state = overlay.showIcons ? .on : .off
+    @objc private func toggleIcons() {
+        Settings.shared.showAppIcons.toggle()
     }
 
-    @objc private func toggleLaunchAtLogin(_ sender: NSMenuItem) {
-        let service = SMAppService.mainApp
-        do {
-            if service.status == .enabled {
-                try service.unregister()
-            } else {
-                try service.register()
-            }
-        } catch {
-            Log.write("Launch at Login change failed: \(error)")
-        }
-        sender.state = service.status == .enabled ? .on : .off
+    @objc private func toggleLaunchAtLogin() {
+        Settings.shared.launchAtLogin.toggle()
+    }
+
+    @objc private func showSettings() {
+        settingsWindow.show()
     }
 
     @objc private func showAbout() {
