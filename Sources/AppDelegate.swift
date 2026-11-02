@@ -1,6 +1,5 @@
 import AppKit
 import ApplicationServices
-import ServiceManagement
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private var statusItem: NSStatusItem!
@@ -159,11 +158,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         let icons = menu.addItem(withTitle: "Show App Icons", action: #selector(toggleIcons(_:)), keyEquivalent: "")
         icons.target = self
-        icons.state = overlay.showIcons ? .on : .off
+        icons.state = Settings.shared.showAppIcons ? .on : .off
 
         let login = menu.addItem(withTitle: "Launch at Login", action: #selector(toggleLaunchAtLogin(_:)), keyEquivalent: "")
         login.target = self
-        login.state = SMAppService.mainApp.status == .enabled ? .on : .off
+        login.state = Settings.shared.launchAtLogin ? .on : .off
 
         menu.addItem(.separator())
         menu.addItem(withTitle: "About Glance", action: #selector(showAbout), keyEquivalent: "").target = self
@@ -177,22 +176,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     @objc private func toggleIcons(_ sender: NSMenuItem) {
-        overlay.showIcons.toggle()
-        sender.state = overlay.showIcons ? .on : .off
+        Settings.shared.showAppIcons.toggle()
+        sender.state = Settings.shared.showAppIcons ? .on : .off
     }
 
     @objc private func toggleLaunchAtLogin(_ sender: NSMenuItem) {
-        let service = SMAppService.mainApp
-        do {
-            if service.status == .enabled {
-                try service.unregister()
-            } else {
-                try service.register()
-            }
-        } catch {
-            Log.write("Launch at Login change failed: \(error)")
-        }
-        sender.state = service.status == .enabled ? .on : .off
+        Settings.shared.launchAtLogin.toggle()
+        sender.state = Settings.shared.launchAtLogin ? .on : .off
     }
 
     @objc private func showAbout() {

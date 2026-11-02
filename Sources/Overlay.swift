@@ -62,10 +62,6 @@ private final class ThumbnailOverlay {
 
 /// Keeps one ThumbnailOverlay per visible thumbnail.
 final class OverlayController {
-    var showIcons = UserDefaults.standard.object(forKey: "showIcons") as? Bool ?? true {
-        didSet { UserDefaults.standard.set(showIcons, forKey: "showIcons") }
-    }
-
     private var overlays: [ThumbnailOverlay] = []
 
     /// Frames are in global Accessibility coordinates.
@@ -74,7 +70,7 @@ final class OverlayController {
             overlays.append(ThumbnailOverlay())
         }
         for (overlay, item) in zip(overlays, items) {
-            overlay.show(over: item.frame, window: item.window, showIcon: showIcons)
+            overlay.show(over: item.frame, window: item.window, showIcon: Settings.shared.showAppIcons)
         }
         overlays.dropFirst(items.count).forEach { $0.hide() }
     }
