@@ -17,7 +17,9 @@ or quit its app with Cmd+Q.
 - **Quit from Mission Control:** hover over a thumbnail and press Cmd+Q to quit that
   window's app. Apps quit normally, so they can still save or ask first. Finder is the
   exception: it stays running.
-- **Lightweight:** a menu bar app with no Dock icon and no network access.
+- **Settings window:** open Glance from Applications, Raycast or Alfred to change its
+  settings, with or without the menu bar icon.
+- **Lightweight:** no Dock icon and no network access.
 
 Runs on macOS 14 Sonoma, 15 Sequoia and 26 Tahoe, on Apple Silicon and Intel.
 
@@ -31,7 +33,7 @@ Runs on macOS 14 Sonoma, 15 Sequoia and 26 Tahoe, on Apple Silicon and Intel.
 4. When asked, allow Glance in **System Settings → Privacy & Security → Accessibility**.
 5. Open Mission Control.
 
-Turn on **Launch at Login** from Glance's menu bar icon to keep it running.
+Turn on **Launch at login** in the settings window to keep it running.
 
 ### Why Accessibility?
 
@@ -51,8 +53,11 @@ requests.
 | Hover over a thumbnail and press Cmd+W | Closes that window, with all its tabs |
 | Hover over a thumbnail and press Cmd+Q | Quits that window's app (does nothing on Finder) |
 
-The menu bar icon lets you hide the app icons, turn on Launch at Login, and open
-the log (`~/Library/Logs/Glance.log`) if something misbehaves.
+Opening Glance shows its settings window, whichever way you open it, except when it
+starts at login. There you can hide the app icons or the menu bar icon, turn on
+Launch at login, quit Glance, and open the log (`~/Library/Logs/Glance.log`) if
+something misbehaves. The menu bar icon offers the same, plus a shortcut to the window.
+Hiding the icon forgets its place in the menu bar, so it comes back in the default spot.
 
 Three-finger clicks are read from the trackpad through Apple's private
 MultitouchSupport framework. If "Look up & data detectors" or three-finger drag is
