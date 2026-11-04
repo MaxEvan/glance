@@ -69,6 +69,7 @@ Requires Xcode command line tools (Swift 5.9 or later). No Xcode project needed.
 
 ```sh
 ./build.sh                 # build/Glance.app (universal: arm64 + x86_64)
+DEV=1 ./build.sh           # build/Glance Dev.app, with its own app ID and permissions
 ./scripts/install.sh       # build, install into /Applications, and launch
 ./scripts/make-dmg.sh      # build/Glance.dmg
 ./scripts/smoke-test.sh build/Glance.dmg
