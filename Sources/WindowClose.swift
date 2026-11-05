@@ -33,12 +33,21 @@ extension AppWindow {
             // A slow app gets the same time to respond as any other press.
             AXUIElementSetMessagingTimeout(element, 0)
             Log.write("Close \(logName): \(tabs.count) tab(s) seen; window children: \(childRoles)")
-            Log.write("Close \(logName): AXError \(Self.pressCloseButton(of: element).rawValue)")
+            let result = Self.pressCloseButton(of: element)
+            Log.write("Close \(logName): AXError \(result.rawValue)")
+            if result == .attributeUnsupported { minimize() }
             done()
             return
         }
         Log.write("Close \(logName): \(tabs.count) tabs: \(tabs.map { "\"\($0.title ?? "")\"" }.joined(separator: ", "))")
         closeBackgroundTabs(tabs, done: done)
+    }
+
+    /// Steam draws its own window buttons inside the page, where Accessibility can't reach
+    /// them, and ignores Cmd+W. Minimizing still takes the window out of Mission Control.
+    private func minimize() {
+        let result = AXUIElementSetAttributeValue(element, kAXMinimizedAttribute as CFString, kCFBooleanTrue)
+        Log.write("  no close button; minimized instead: AXError \(result.rawValue)")
     }
 
     private var childRoles: String {
