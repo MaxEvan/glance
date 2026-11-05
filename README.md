@@ -109,8 +109,8 @@ window controls to Mission Control and is worth a look if you want more actions.
 
 ## Releasing
 
-Push a version tag; CI builds the universal DMG, smoke-tests it on every supported macOS
-version and chip, and publishes a GitHub Release:
+Push a version tag; CI builds the universal DMG, smoke-tests it on macOS 15 and 26
+on both chips (GitHub no longer offers macOS 14 runners), and publishes a GitHub Release:
 
 ```sh
 git tag v1.0.0 && git push origin v1.0.0
