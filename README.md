@@ -13,7 +13,8 @@ or quit its app with Cmd+Q.
   centred on the thumbnail's bottom edge, fading in as Mission Control opens.
 - **Close from Mission Control:** middle-click a thumbnail, click it with three
   fingers on the trackpad, or hover over it and press Cmd+W, to close that window
-  without leaving the overview.
+  without leaving the overview. Windows with no close button Glance can press, like
+  Steam's, are minimized instead.
 - **Quit from Mission Control:** hover over a thumbnail and press Cmd+Q to quit that
   window's app. Apps quit normally, so they can still save or ask first. Finder is the
   exception: it stays running.
@@ -93,7 +94,9 @@ Dev clears it on launch when it isn't trusted, so the prompt adds a fresh one.
 - **Closing windows:** Mission Control swallows clicks before other windows see them, so a
   session event tap (only enabled while Mission Control is open) hit-tests clicks, and the
   cursor position when Cmd+W is pressed, against the thumbnails and presses the window's
-  close button. Keystrokes away from a thumbnail pass through untouched.
+  close button. Keystrokes away from a thumbnail pass through untouched. Steam draws its
+  window buttons inside the page, out of Accessibility's reach, and ignores Cmd+W, so a
+  window without a close button is minimized, which also takes it off the overview.
 - **Closing tabbed windows:** a window's close button only closes its active tab, so Glance
   repeats it until every tab is gone. The next tab can show for a moment as it closes.
 - **Quitting apps:** Cmd+Q is hit-tested the same way, then the app gets a normal quit
