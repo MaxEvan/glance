@@ -36,7 +36,8 @@ lipo -create build/Glance-arm64 build/Glance-x86_64 -output "$APP/Contents/MacOS
 rm build/Glance-arm64 build/Glance-x86_64
 
 # Ad-hoc signature: macOS ties the Accessibility grant to this exact build,
-# so the permission has to be re-granted after every rebuild.
+# so the permission has to be re-granted after every rebuild (Glance Dev clears
+# the stale grant itself on launch).
 codesign --force --sign - --identifier "$ID" "$APP"
 
 echo "Built $APP"

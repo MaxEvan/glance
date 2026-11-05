@@ -52,6 +52,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     // MARK: Accessibility permission
 
     private func requestAccessibility() {
+        clearStaleDevGrant()
         let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true] as CFDictionary
         if AXIsProcessTrustedWithOptions(options) {
             accessibilityGranted()
@@ -63,6 +64,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             guard AXIsProcessTrusted() else { return }
             timer.invalidate()
             self?.accessibilityGranted()
+        }
+    }
+
+    /// The dev build is ad-hoc signed, so its grant only fits the build it was given to. A
+    /// rebuild leaves the old entry switched on in System Settings while doing nothing, and
+    /// switching it again doesn't help. Clearing it lets the prompt add one for this build.
+    private func clearStaleDevGrant() {
+        guard let id = Bundle.main.bundleIdentifier, id.hasSuffix(".dev"), !AXIsProcessTrusted() else { return }
+        let reset = Process()
+        reset.executableURL = URL(fileURLWithPath: "/usr/bin/tccutil")
+        reset.arguments = ["reset", "Accessibility", id]
+        do {
+            try reset.run()
+            reset.waitUntilExit()
+            Log.write("Cleared stale Accessibility grant: tccutil exited \(reset.terminationStatus)")
+        } catch {
+            Log.write("Couldn't clear stale Accessibility grant: \(error)")
         }
     }
 

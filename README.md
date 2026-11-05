@@ -77,6 +77,8 @@ DEV=1 ./build.sh           # build/Glance Dev.app, with its own app ID and permi
 ```
 
 Local builds are ad-hoc signed, so macOS asks for Accessibility again after each rebuild.
+System Settings keeps showing the old grant switched on, though it no longer applies. Glance
+Dev clears it on launch when it isn't trusted, so the prompt adds a fresh one.
 
 ## How it works
 
