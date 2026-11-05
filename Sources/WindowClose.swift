@@ -90,7 +90,10 @@ extension AppWindow {
 
     /// Step 2: closes the active tab of `window`, then does the same to the tab that replaces it.
     private func closeTabsOneByOne(window: AXUIElement, otherTitles: [String], done: @escaping () -> Void) {
-        let appElement = AXUIElementCreateApplication(app.processIdentifier)
+        // The window's own process: a bundled helper's windows are filed under the app.
+        var pid: pid_t = 0
+        AXUIElementGetPid(window, &pid)
+        let appElement = AXUIElementCreateApplication(pid)
         AXUIElementSetMessagingTimeout(appElement, Self.stepTimeout)
         AXUIElementSetMessagingTimeout(window, Self.stepTimeout)
         let openWindows = { (appElement.value(kAXWindowsAttribute) as? [AXUIElement]) ?? [] }
