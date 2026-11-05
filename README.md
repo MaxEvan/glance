@@ -84,7 +84,8 @@ Local builds are ad-hoc signed, so macOS asks for Accessibility again after each
   group (`mc`) whose buttons are the window thumbnails, with their titles and frames.
 - **Matching windows:** thumbnails are matched to real windows by title, through each
   running app's own Accessibility tree. Untitled thumbnails go to the untitled window
-  closest to their shape.
+  closest to their shape. Windows drawn by a helper bundled inside an app, like Steam's,
+  count as that app's.
 - **Drawing icons:** small borderless panels at a very high window level sit above the
   Mission Control surface and ignore the mouse.
 - **Closing windows:** Mission Control swallows clicks before other windows see them, so a
