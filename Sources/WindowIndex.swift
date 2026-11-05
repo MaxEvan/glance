@@ -15,16 +15,31 @@ enum WindowIndex {
     /// match. Mission Control scales windows without distorting them.
     private static let aspectTolerance: CGFloat = 0.03
 
-    /// Every window of every regular (Dock-visible) app.
+    /// Every window of every regular (Dock-visible) app, plus the windows of helpers bundled
+    /// inside one. Steam draws its windows, such as its main window and the Special Offers
+    /// popup, from "Steam Helper.app" inside Steam.app, which has no Dock icon of its own. A
+    /// helper's windows are filed under the app that bundles it, for the icon and for Cmd+Q.
     static func build() -> [AppWindow] {
-        NSWorkspace.shared.runningApplications
-            .filter { $0.activationPolicy == .regular }
-            .flatMap { app -> [AppWindow] in
-                let element = AXUIElementCreateApplication(app.processIdentifier)
-                AXUIElementSetMessagingTimeout(element, 0.25)
-                let windows = (element.value(kAXWindowsAttribute) as? [AXUIElement]) ?? []
-                return windows.map { AppWindow(app: app, title: $0.title ?? "", element: $0, frame: $0.frame) }
+        let running = NSWorkspace.shared.runningApplications
+        let regular = running.filter { $0.activationPolicy == .regular }
+        return running.flatMap { process -> [AppWindow] in
+            guard let app = process.activationPolicy == .regular ? process : bundlingApp(of: process, in: regular) else {
+                return []
             }
+            let element = AXUIElementCreateApplication(process.processIdentifier)
+            AXUIElementSetMessagingTimeout(element, 0.25)
+            let windows = (element.value(kAXWindowsAttribute) as? [AXUIElement]) ?? []
+            return windows.map { AppWindow(app: app, title: $0.title ?? "", element: $0, frame: $0.frame) }
+        }
+    }
+
+    /// The regular app whose bundle contains `helper`'s bundle, if any.
+    private static func bundlingApp(of helper: NSRunningApplication, in regular: [NSRunningApplication]) -> NSRunningApplication? {
+        guard helper.activationPolicy == .accessory, let path = helper.bundleURL?.standardizedFileURL.path else { return nil }
+        return regular.first { app in
+            guard let appPath = app.bundleURL?.standardizedFileURL.path else { return false }
+            return path.hasPrefix(appPath.hasSuffix("/") ? appPath : appPath + "/")
+        }
     }
 
     /// Pairs each thumbnail with a window, matching on title. A window is used at most once

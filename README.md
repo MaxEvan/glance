@@ -13,7 +13,8 @@ or quit its app with Cmd+Q.
   centred on the thumbnail's bottom edge, fading in as Mission Control opens.
 - **Close from Mission Control:** middle-click a thumbnail, click it with three
   fingers on the trackpad, or hover over it and press Cmd+W, to close that window
-  without leaving the overview.
+  without leaving the overview. Windows with no close button Glance can press, like
+  Steam's, are minimized instead.
 - **Quit from Mission Control:** hover over a thumbnail and press Cmd+Q to quit that
   window's app. Apps quit normally, so they can still save or ask first. Finder is the
   exception: it stays running.
@@ -77,6 +78,8 @@ DEV=1 ./build.sh           # build/Glance Dev.app, with its own app ID and permi
 ```
 
 Local builds are ad-hoc signed, so macOS asks for Accessibility again after each rebuild.
+System Settings keeps showing the old grant switched on, though it no longer applies. Glance
+Dev clears it on launch when it isn't trusted, so the prompt adds a fresh one.
 
 ## How it works
 
@@ -84,13 +87,16 @@ Local builds are ad-hoc signed, so macOS asks for Accessibility again after each
   group (`mc`) whose buttons are the window thumbnails, with their titles and frames.
 - **Matching windows:** thumbnails are matched to real windows by title, through each
   running app's own Accessibility tree. Untitled thumbnails go to the untitled window
-  closest to their shape.
+  closest to their shape. Windows drawn by a helper bundled inside an app, like Steam's,
+  count as that app's.
 - **Drawing icons:** small borderless panels at a very high window level sit above the
   Mission Control surface and ignore the mouse.
 - **Closing windows:** Mission Control swallows clicks before other windows see them, so a
   session event tap (only enabled while Mission Control is open) hit-tests clicks, and the
   cursor position when Cmd+W is pressed, against the thumbnails and presses the window's
-  close button. Keystrokes away from a thumbnail pass through untouched.
+  close button. Keystrokes away from a thumbnail pass through untouched. Steam draws its
+  window buttons inside the page, out of Accessibility's reach, and ignores Cmd+W, so a
+  window without a close button is minimized, which also takes it off the overview.
 - **Closing tabbed windows:** a window's close button only closes its active tab, so Glance
   repeats it until every tab is gone. The next tab can show for a moment as it closes.
 - **Quitting apps:** Cmd+Q is hit-tested the same way, then the app gets a normal quit
@@ -103,8 +109,8 @@ window controls to Mission Control and is worth a look if you want more actions.
 
 ## Releasing
 
-Push a version tag; CI builds the universal DMG, smoke-tests it on every supported macOS
-version and chip, and publishes a GitHub Release:
+Push a version tag; CI builds the universal DMG, smoke-tests it on macOS 15 and 26
+on both chips (GitHub no longer offers macOS 14 runners), and publishes a GitHub Release:
 
 ```sh
 git tag v1.0.0 && git push origin v1.0.0

@@ -33,12 +33,21 @@ extension AppWindow {
             // A slow app gets the same time to respond as any other press.
             AXUIElementSetMessagingTimeout(element, 0)
             Log.write("Close \(logName): \(tabs.count) tab(s) seen; window children: \(childRoles)")
-            Log.write("Close \(logName): AXError \(Self.pressCloseButton(of: element).rawValue)")
+            let result = Self.pressCloseButton(of: element)
+            Log.write("Close \(logName): AXError \(result.rawValue)")
+            if result == .attributeUnsupported { minimize() }
             done()
             return
         }
         Log.write("Close \(logName): \(tabs.count) tabs: \(tabs.map { "\"\($0.title ?? "")\"" }.joined(separator: ", "))")
         closeBackgroundTabs(tabs, done: done)
+    }
+
+    /// Steam draws its own window buttons inside the page, where Accessibility can't reach
+    /// them, and ignores Cmd+W. Minimizing still takes the window out of Mission Control.
+    private func minimize() {
+        let result = AXUIElementSetAttributeValue(element, kAXMinimizedAttribute as CFString, kCFBooleanTrue)
+        Log.write("  no close button; minimized instead: AXError \(result.rawValue)")
     }
 
     private var childRoles: String {
@@ -81,7 +90,10 @@ extension AppWindow {
 
     /// Step 2: closes the active tab of `window`, then does the same to the tab that replaces it.
     private func closeTabsOneByOne(window: AXUIElement, otherTitles: [String], done: @escaping () -> Void) {
-        let appElement = AXUIElementCreateApplication(app.processIdentifier)
+        // The window's own process: a bundled helper's windows are filed under the app.
+        var pid: pid_t = 0
+        AXUIElementGetPid(window, &pid)
+        let appElement = AXUIElementCreateApplication(pid)
         AXUIElementSetMessagingTimeout(appElement, Self.stepTimeout)
         AXUIElementSetMessagingTimeout(window, Self.stepTimeout)
         let openWindows = { (appElement.value(kAXWindowsAttribute) as? [AXUIElement]) ?? [] }
